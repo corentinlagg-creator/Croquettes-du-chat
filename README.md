@@ -1,4 +1,4 @@
-# Journal santé — mise en place (GitHub Pages + Supabase)
+# Croquettes du Chat — mise en place (GitHub Pages + Supabase)
 
 Durée : 20 à 30 minutes, une seule fois. Tout est gratuit.
 
