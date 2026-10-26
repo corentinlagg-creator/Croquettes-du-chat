@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Journal santé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-title" content="Journal santé">
+<meta name="theme-color" content="#24344F">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ===== À REMPLIR (Supabase > Project Settings > API) ===== */
+window.SUPABASE_URL = "https://amwamuaefioawoysfmri.supabase.co";
+window.SUPABASE_ANON_KEY = "sb_publishable_TZPpGNBoRIELV-5NvafcBA_rYMwHYgh";
+</script>
+<style>
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --ink:#18222B; --muted:#5A6670; --line:#D5DDD7;
+  --accent:#2E6A4E; --accent-ink:#FFFFFF; --soft:#E2ECE5; --amber:#A86A12; --danger:#A23B2A;
+  --night:#24344F; --night-ink:#F1F4FA;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1418; --surface:#182027; --ink:#E7ECEF; --muted:#98A4AD; --line:#2B353D;
+    --accent:#72C298; --accent-ink:#0C1A12; --soft:#1C2A23; --amber:#E2A94F; --danger:#E8836F;
+    --night:#1B2740; --night-ink:#E6ECF7;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1418; --surface:#182027; --ink:#E7ECEF; --muted:#98A4AD; --line:#2B353D;
+  --accent:#72C298; --accent-ink:#0C1A12; --soft:#1C2A23; --amber:#E2A94F; --danger:#E8836F;
+  --night:#1B2740; --night-ink:#E6ECF7;
+  color-scheme: dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.45;padding-bottom:96px}
+h1,h2,h3{font-family:"Bricolage Grotesque","Atkinson Hyperlegible",system-ui,sans-serif;margin:0;line-height:1.15}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+
+/* En-tête : la nuit qui précède la journée */
+.top{background:var(--night);color:var(--night-ink);padding:28px 0 26px;border-radius:0 0 28px 28px}
+.top label{font-size:15px;opacity:.8;display:block;margin-bottom:6px}
+.top input[type=date]{font:inherit;font-size:17px;background:rgba(255,255,255,.1);color:var(--night-ink);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 10px;color-scheme:dark}
+.datelong{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;font-size:clamp(30px,8vw,44px);letter-spacing:-.01em;margin:14px 0 4px;text-transform:capitalize}
+.entry-state{margin:0;font-size:15px;opacity:.85}
+
+.banner{margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--soft);border:1px solid var(--line);font-size:15px}
+.banner[hidden]{display:none}
+
+section.block{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 16px 20px;margin-top:16px}
+section.block>h2{font-size:22px;font-weight:700;margin-bottom:4px}
+.hint{color:var(--muted);font-size:14px;margin:2px 0 12px}
+.night-block{border-left:6px solid var(--night)}
+
+label.f{display:block;margin-top:14px;font-weight:700;font-size:15px}
+label.f>input,label.f>select,label.f>textarea{display:block;width:100%;margin-top:6px}
+input[type=text],input[type=number],input[type=time],select,textarea{font:inherit;font-size:17px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:46px}
+textarea{min-height:76px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dur{display:flex;gap:8px;align-items:center;margin-top:6px}
+.dur input{width:5.5em}
+.dur span{color:var(--muted)}
+
+/* Choix segmentés */
+.seg{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{display:inline-flex;align-items:center;min-height:44px;padding:8px 16px;border:1px solid var(--line);border-radius:999px;background:var(--bg);cursor:pointer;font-weight:400;user-select:none}
+.seg input:checked+label{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.seg input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+.q{font-weight:700;font-size:15px;margin-top:16px;display:block}
+
+.stress{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.stress input{position:absolute;opacity:0;pointer-events:none}
+.stress label{display:flex;align-items:center;justify-content:center;height:52px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:22px;font-weight:700;cursor:pointer}
+.stress input:checked+label{background:var(--amber);border-color:var(--amber);color:#fff}
+.stress input:focus-visible+label{outline:3px solid var(--accent);outline-offset:2px}
+.stress-scale{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:6px}
+
+.stepper{display:flex;align-items:center;gap:8px;margin-top:6px}
+.stepper button{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:22px;cursor:pointer}
+.stepper input{width:5em;text-align:center}
+
+.reveal[hidden]{display:none}
+.reveal{margin-top:8px}
+
+/* Activités */
+.act{border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:14px;background:var(--bg)}
+.act input,.act select{background:var(--surface)}
+.act-head{display:flex;justify-content:space-between;align-items:center}
+.act-head h3{font-size:18px}
+.linkbtn{background:none;border:none;color:var(--danger);font:inherit;font-size:15px;cursor:pointer;padding:6px}
+.check{display:flex;align-items:center;gap:10px;margin-top:14px;font-weight:700;font-size:15px;cursor:pointer}
+.check input{width:22px;height:22px;accent-color:var(--accent)}
+.addbtn{margin-top:14px;width:100%;min-height:48px;border:2px dashed var(--accent);background:transparent;color:var(--accent);border-radius:14px;font:inherit;font-weight:700;cursor:pointer}
+.addbtn[hidden]{display:none}
+
+/* Barre d’enregistrement */
+.savebar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:20}
+.savebar .wrap{display:flex;align-items:center;gap:12px;padding:0}
+.status{flex:1;font-size:14px;color:var(--muted)}
+.status.err{color:var(--danger)}
+.primary{min-height:50px;padding:0 22px;border:none;border-radius:14px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;font-size:17px;cursor:pointer}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+.secondary{min-height:46px;padding:0 16px;border:1px solid var(--accent);border-radius:12px;background:transparent;color:var(--accent);font:inherit;font-weight:700;cursor:pointer}
+
+/* Historique */
+.hist-list{list-style:none;margin:12px 0 0;padding:0}
+.hist-list li{border-top:1px solid var(--line)}
+.hist-list button{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:none;color:var(--ink);font:inherit;padding:12px 2px;cursor:pointer}
+.hd{font-family:"Bricolage Grotesque",system-ui,sans-serif;font-weight:700;min-width:4.6em}
+.hs{color:var(--muted);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hstress{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--soft)}
+.exports{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.auth{max-width:640px;margin:24px auto 0;padding:0 16px}
+.auth[hidden],main[hidden],.savebar[hidden]{display:none}
+.auth .block{margin-top:0}
+.auth .primary{width:100%;margin-top:14px}
+.logout{margin-top:18px;background:none;border:none;color:var(--muted);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:4px}
+@media (prefers-reduced-motion: no-preference){ .seg label,.stress label{transition:background-color .12s} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <label for="date">Journée du</label>
+    <input type="date" id="date">
+    <p class="datelong" id="dateLong"></p>
+    <p class="entry-state" id="entryState"></p>
+  </div>
+</header>
+
+<div class="auth" id="auth" hidden>
+  <section class="block" aria-labelledby="h-auth">
+    <h2 id="h-auth">Connexion</h2>
+    <p class="hint">Une seule fois par appareil : tu reçois un e-mail de connexion.</p>
+    <div id="authStep1">
+      <label class="f">Adresse e-mail<input type="email" id="authEmail" autocomplete="email" inputmode="email"></label>
+      <button type="button" class="primary" id="authSend">Recevoir l’e-mail de connexion</button>
+    </div>
+    <div id="authStep2" hidden>
+      <p class="hint">Ouvre l’e-mail <strong>sur cet appareil</strong> et touche le lien : la page s’ouvre connectée. Si l’e-mail contient un code, tu peux aussi le saisir ici.</p>
+      <label class="f">Code (facultatif)<input type="text" id="authCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10"></label>
+      <button type="button" class="primary" id="authVerify">Valider</button>
+      <button type="button" class="logout" id="authBack">Changer d’adresse</button>
+    </div>
+    <p class="hint" id="authMsg" role="status" aria-live="polite" style="margin-top:12px"></p>
+  </section>
+</div>
+
+<main class="wrap" id="app" hidden>
+  <p class="banner" id="banner" hidden></p>
+
+  <section class="block night-block" aria-labelledby="h-sommeil">
+    <h2 id="h-sommeil">Sommeil</h2>
+    <p class="hint" id="nightLabel">La nuit passée</p>
+    <label class="f">Score Garmin
+      <input type="number" id="sScore" inputmode="numeric" min="0" max="100" placeholder="0 à 100">
+    </label>
+    <div class="row">
+      <label class="f">Coucher<input type="time" id="sCoucher"></label>
+      <label class="f">Lever<input type="time" id="sLever"></label>
+    </div>
+    <label class="f" for="sDurH">Durée de sommeil</label>
+    <div class="dur">
+      <input type="number" id="sDurH" inputmode="numeric" min="0" max="24" aria-label="Heures"><span>h</span>
+      <input type="number" id="sDurM" inputmode="numeric" min="0" max="59" aria-label="Minutes"><span>min</span>
+    </div>
+    <p class="hint" style="margin-top:6px">Calculée depuis le coucher et le lever, modifiable avec la valeur Garmin.</p>
+    <label class="f">Commentaires
+      <textarea id="sComment" placeholder="Insomnie, réveils nocturnes…"></textarea>
+    </label>
+  </section>
+
+  <section class="block night-block" aria-labelledby="h-fc">
+    <h2 id="h-fc">Fréquence cardiaque</h2>
+    <p class="hint">Valeurs Garmin de la nuit passée.</p>
+    <div class="row">
+      <label class="f">FC repos (bpm)<input type="number" id="fcRepos" inputmode="numeric" min="20" max="150" placeholder="ex. 48"></label>
+      <label class="f">VFC (ms)<input type="number" id="vfc" inputmode="numeric" min="0" max="300" placeholder="ex. 62"></label>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-jour">
+    <h2 id="h-jour">Journée</h2>
+    <div class="seg" role="radiogroup" aria-labelledby="h-jour">
+      <input type="radio" name="type_jour" id="tj1" value="travaillé"><label for="tj1">Jour travaillé</label>
+      <input type="radio" name="type_jour" id="tj2" value="off"><label for="tj2">Jour off</label>
+      <input type="radio" name="type_jour" id="tj3" value="weekend"><label for="tj3">Weekend</label>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-sport">
+    <h2 id="h-sport">Sport</h2>
+    <span class="q" id="q-sport">Activité sportive aujourd’hui ?</span>
+    <div class="seg" role="radiogroup" aria-labelledby="q-sport">
+      <input type="radio" name="sport" id="sp1" value="oui"><label for="sp1">Oui</label>
+      <input type="radio" name="sport" id="sp0" value="non"><label for="sp0">Non</label>
+    </div>
+    <div class="reveal" id="sportBlock" hidden>
+      <div id="acts"></div>
+      <button type="button" class="addbtn" id="addAct">Ajouter une activité</button>
+    </div>
+    <label class="f">Nombre de pas
+      <input type="number" id="pas" inputmode="numeric" min="0" placeholder="ex. 12000">
+    </label>
+  </section>
+
+  <section class="block" aria-labelledby="h-repas">
+    <h2 id="h-repas">Repas</h2>
+    <p class="hint">Sépare les aliments par des virgules : chaque aliment devient une ligne dans l’export, pratique pour chercher des corrélations.</p>
+
+    <span class="q" id="q-pdj">Petit déjeuner</span>
+    <div class="seg" role="radiogroup" aria-labelledby="q-pdj">
+      <input type="radio" name="pdj" id="pd1" value="classique"><label for="pd1">Classique (banane, céréales)</label>
+      <input type="radio" name="pdj" id="pd2" value="personnalisé"><label for="pd2">Personnalisé</label>
+      <input type="radio" name="pdj" id="pd0" value="aucun"><label for="pd0">Pas de petit déj</label>
+    </div>
+    <div class="reveal" id="pdjBlock" hidden>
+      <textarea id="pdjText" aria-label="Petit déjeuner personnalisé" placeholder="tartines, beurre, confiture, café"></textarea>
+    </div>
+
+    <label class="f">Déjeuner
+      <textarea id="dejeuner" placeholder="poulet, riz, haricots verts"></textarea>
+    </label>
+
+    <span class="q" id="q-gouter">Goûter</span>
+    <div class="seg" role="radiogroup" aria-labelledby="q-gouter">
+      <input type="radio" name="gouter" id="go0" value="aucun"><label for="go0">Pas de goûter</label>
+      <input type="radio" name="gouter" id="go1" value="oui"><label for="go1">Goûter</label>
+    </div>
+    <div class="reveal" id="gouterBlock" hidden>
+      <textarea id="gouterText" aria-label="Goûter" placeholder="pomme, amandes"></textarea>
+    </div>
+
+    <label class="f">Dîner
+      <textarea id="diner" placeholder="pâtes, sauce tomate, parmesan"></textarea>
+    </label>
+    <label class="f">Heure du dîner
+      <input type="time" id="dinerHeure">
+    </label>
+  </section>
+
+  <section class="block" aria-labelledby="h-conso">
+    <h2 id="h-conso">Café et alcool</h2>
+    <div class="row">
+      <div>
+        <label class="f" for="cafes">Cafés</label>
+        <div class="stepper"><button type="button" data-step="cafes" data-d="-1" aria-label="Un café de moins">−</button><input type="number" id="cafes" inputmode="decimal" min="0" step="0.5" value="0"><button type="button" data-step="cafes" data-d="1" aria-label="Un café de plus">+</button></div>
+      </div>
+      <div>
+        <label class="f" for="alcool">Verres d’alcool</label>
+        <div class="stepper"><button type="button" data-step="alcool" data-d="-1" aria-label="Un verre de moins">−</button><input type="number" id="alcool" inputmode="decimal" min="0" step="0.5" value="0"><button type="button" data-step="alcool" data-d="1" aria-label="Un verre de plus">+</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-sieste">
+    <h2 id="h-sieste">Sieste</h2>
+    <div class="seg" role="radiogroup" aria-labelledby="h-sieste">
+      <input type="radio" name="sieste" id="si1" value="oui"><label for="si1">Oui</label>
+      <input type="radio" name="sieste" id="si0" value="non"><label for="si0">Non</label>
+    </div>
+    <div class="reveal" id="siesteBlock" hidden>
+      <label class="f">Durée (min)
+        <input type="number" id="siesteMin" inputmode="numeric" min="0" placeholder="ex. 20">
+      </label>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="h-stress">
+    <h2 id="h-stress">Stress de la journée</h2>
+    <div class="stress" role="radiogroup" aria-labelledby="h-stress">
+      <input type="radio" name="stress" id="st1" value="1"><label for="st1">1</label>
+      <input type="radio" name="stress" id="st2" value="2"><label for="st2">2</label>
+      <input type="radio" name="stress" id="st3" value="3"><label for="st3">3</label>
+      <input type="radio" name="stress" id="st4" value="4"><label for="st4">4</label>
+      <input type="radio" name="stress" id="st5" value="5"><label for="st5">5</label>
+    </div>
+    <div class="stress-scale"><span>Chill</span><span>Couru partout + stress psy</span></div>
+  </section>
+
+  <section class="block" aria-labelledby="h-symp">
+    <h2 id="h-symp">Symptômes</h2>
+    <p class="hint">Un symptôme par virgule, ex. mal de ventre, rhinite allergique.</p>
+    <textarea id="symptomes" aria-labelledby="h-symp" placeholder="Rien de particulier"></textarea>
+  </section>
+
+  <section class="block" aria-labelledby="h-autre">
+    <h2 id="h-autre">Autre</h2>
+    <p class="hint">Facultatif.</p>
+    <textarea id="autre" aria-labelledby="h-autre" placeholder="Infos utiles : voyage, médicament, événement…"></textarea>
+  </section>
+
+  <section class="block" aria-labelledby="h-hist" id="historique">
+    <h2 id="h-hist">Historique</h2>
+    <p class="hint" id="histCount">Aucune journée enregistrée pour l’instant.</p>
+    <div class="exports">
+      <button type="button" class="secondary" id="expXlsx">Exporter en Excel</button>
+      <button type="button" class="secondary" id="expCsv">Exporter en CSV</button>
+    </div>
+    <p class="hint" id="expMsg" style="margin-top:8px"></p>
+    <ul class="hist-list" id="histList"></ul>
+    <button type="button" class="logout" id="logout">Se déconnecter</button>
+  </section>
+</main>
+
+<div class="savebar" id="savebar" hidden>
+  <div class="wrap">
+    <span class="status" id="status" role="status" aria-live="polite"></span>
+    <button type="button" class="primary" id="saveBtn">Enregistrer</button>
+  </div>
+</div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const NATURES = ["Course à pied","Vélo","Natation","Musculation","Renforcement","Autre"];
+const TYPES = ["VMA / fractionné","Aérobie élevée","Sortie facile","Non applicable"];
+const PDJ_CLASSIQUE = "banane, bol de céréales";
+const state = { sb:null, uid:null, days:new Map(), activities:[], dirty:false, durManual:false, firstSnap:true };
+
+/* ---------- Dates ---------- */
+const pad = n => String(n).padStart(2,"0");
+function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function parseISO(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d); }
+function short(iso){ const [y,m,d]=iso.split("-"); return `${d}/${m}/${y.slice(2)}`; }
+function longFr(iso){ return parseISO(iso).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
+function weekday(iso){ return parseISO(iso).toLocaleDateString("fr-FR",{weekday:"long"}); }
+function prevISO(iso){ const d=parseISO(iso); d.setDate(d.getDate()-1); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function excelSerial(iso){ const [y,m,d]=iso.split("-").map(Number); return (Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/86400000; }
+function hourDec(t, night){ if(!t) return null; const [h,m]=t.split(":").map(Number); let v=h+m/60; if(night && h<12) v+=24; return Math.round(v*100)/100; }
+
+/* ---------- Helpers formulaire ---------- */
+function num(v){ if(v===""||v==null) return null; const n=Number(String(v).replace(",",".")); return isFinite(n)?n:null; }
+function radioVal(name){ const el=document.querySelector(`input[name="${name}"]:checked`); return el?el.value:null; }
+function setRadio(name,val){ document.querySelectorAll(`input[name="${name}"]`).forEach(r=>{ r.checked = val!=null && r.value===String(val); }); }
+function blankAct(){ return {nature:"",nature_autre:"",heure:"",duree_min:null,type:"",course:false}; }
+
+function computeDur(){
+  const c=$("#sCoucher").value, l=$("#sLever").value;
+  if(!c||!l) return null;
+  const [ch,cm]=c.split(":").map(Number), [lh,lm]=l.split(":").map(Number);
+  let m=(lh*60+lm)-(ch*60+cm); if(m<=0) m+=1440; return m;
+}
+function setDur(min){ if(min==null){ $("#sDurH").value=""; $("#sDurM").value=""; } else { $("#sDurH").value=Math.floor(min/60); $("#sDurM").value=min%60; } }
+
+function updateVisibility(){
+  $("#sportBlock").hidden = radioVal("sport")!=="oui";
+  $("#pdjBlock").hidden = radioVal("pdj")!=="personnalisé";
+  $("#gouterBlock").hidden = radioVal("gouter")!=="oui";
+  $("#siesteBlock").hidden = radioVal("sieste")!=="oui";
+}
+
+function updateHeader(){
+  const iso=$("#date").value;
+  if(!iso){ $("#dateLong").textContent="Choisis une date"; $("#nightLabel").textContent="La nuit passée"; return; }
+  $("#dateLong").textContent=longFr(iso);
+  const p=prevISO(iso);
+  $("#nightLabel").textContent=`Nuit du ${short(p)} au ${short(iso)}`;
+  const saved=state.days.get(iso);
+  $("#entryState").textContent = saved ? `Journée déjà enregistrée, tu peux la modifier.` : `Nouvelle journée (${short(iso)}).`;
+}
+
+/* ---------- Activités ---------- */
+function actCard(a,i){
+  const div=document.createElement("div");
+  div.className="act"; div.dataset.i=i;
+  div.innerHTML=`
+    <div class="act-head"><h3>Activité ${i+1}</h3><button type="button" class="linkbtn a-remove">Retirer</button></div>
+    <label class="f">Nature<select class="a-nature"><option value="">Choisir…</option>${NATURES.map(n=>`<option>${n}</option>`).join("")}</select></label>
+    <label class="f a-autre-wrap">Précise l’activité<input type="text" class="a-autre" placeholder="ex. randonnée, padel"></label>
+    <div class="row">
+      <label class="f">Heure<input type="time" class="a-heure"></label>
+      <label class="f">Durée (min)<input type="number" class="a-duree" inputmode="numeric" min="0"></label>
+    </div>
+    <label class="f">Type d’exercice<select class="a-type"><option value="">Choisir…</option>${TYPES.map(n=>`<option>${n}</option>`).join("")}</select></label>
+    <label class="check"><input type="checkbox" class="a-course"> Course (événement, dossard)</label>`;
+  div.querySelector(".a-nature").value=a.nature||"";
+  div.querySelector(".a-autre").value=a.nature_autre||"";
+  div.querySelector(".a-autre-wrap").hidden = a.nature!=="Autre";
+  div.querySelector(".a-heure").value=a.heure||"";
+  div.querySelector(".a-duree").value=a.duree_min??"";
+  div.querySelector(".a-type").value=a.type||"";
+  div.querySelector(".a-course").checked=!!a.course;
+  return div;
+}
+function renderActs(){
+  const wrap=$("#acts"); wrap.innerHTML="";
+  state.activities.forEach((a,i)=>wrap.appendChild(actCard(a,i)));
+  updateAddBtn();
+}
+function updateAddBtn(){
+  const last=state.activities[state.activities.length-1];
+  const btn=$("#addAct");
+  btn.hidden = !!last && !last.nature;
+  btn.textContent = state.activities.length ? `Ajouter l’activité ${state.activities.length+1}` : "Ajouter une activité";
+}
+$("#acts").addEventListener("input",e=>{
+  const card=e.target.closest(".act"); if(!card) return;
+  const a=state.activities[+card.dataset.i]; const t=e.target;
+  if(t.matches(".a-nature")){ a.nature=t.value; card.querySelector(".a-autre-wrap").hidden = t.value!=="Autre"; updateAddBtn(); }
+  else if(t.matches(".a-autre")) a.nature_autre=t.value;
+  else if(t.matches(".a-heure")) a.heure=t.value;
+  else if(t.matches(".a-duree")) a.duree_min=num(t.value);
+  else if(t.matches(".a-type")) a.type=t.value;
+  else if(t.matches(".a-course")) a.course=t.checked;
+  markDirty();
+});
+$("#acts").addEventListener("click",e=>{
+  const b=e.target.closest(".a-remove"); if(!b) return;
+  state.activities.splice(+b.closest(".act").dataset.i,1); renderActs(); markDirty();
+});
+$("#addAct").addEventListener("click",()=>{
+  state.activities.push(blankAct()); renderActs(); markDirty();
+  const sel=document.querySelectorAll(".a-nature"); sel[sel.length-1]?.focus();
+});
+
+/* ---------- Lecture / écriture du formulaire ---------- */
+function getForm(){
+  const sport=radioVal("sport"), pdj=radioVal("pdj"), gouter=radioVal("gouter"), sieste=radioVal("sieste");
+  const dh=num($("#sDurH").value), dm=num($("#sDurM").value);
+  return {
+    date:$("#date").value,
+    sommeil:{ score:num($("#sScore").value), coucher:$("#sCoucher").value||null, lever:$("#sLever").value||null,
+      duree_min:(dh==null&&dm==null)?null:(dh||0)*60+(dm||0), commentaire:$("#sComment").value.trim() },
+    fc:{ repos:num($("#fcRepos").value), vfc:num($("#vfc").value) },
+    type_jour:radioVal("type_jour"),
+    sport: sport==null?null:sport==="oui",
+    activites: sport==="oui" ? state.activities.filter(a=>a.nature).map(a=>({...a, nature_autre:a.nature==="Autre"?a.nature_autre.trim():""})) : [],
+    pas:num($("#pas").value),
+    repas:{ pdj_type:pdj, pdj_texte: pdj==="personnalisé" ? $("#pdjText").value.trim() : "",
+      dejeuner:$("#dejeuner").value.trim(), gouter_type:gouter, gouter_texte: gouter==="oui" ? $("#gouterText").value.trim() : "",
+      diner:$("#diner").value.trim(), diner_heure:$("#dinerHeure").value||null },
+    cafes:num($("#cafes").value), alcool:num($("#alcool").value),
+    sieste: sieste==null?null:sieste==="oui", sieste_min: sieste==="oui"?num($("#siesteMin").value):null,
+    stress:num(radioVal("stress")),
+    symptomes:$("#symptomes").value.trim(), autre:$("#autre").value.trim(),
+    updatedAt:new Date().toISOString()
+  };
+}
+function setForm(d, iso){
+  const s=d?.sommeil||{}, r=d?.repas||{};
+  $("#sScore").value=s.score??""; $("#sCoucher").value=s.coucher||""; $("#sLever").value=s.lever||"";
+  setDur(s.duree_min??null); state.durManual = s.duree_min!=null && s.duree_min!==computeDur();
+  $("#sComment").value=s.commentaire||"";
+  $("#fcRepos").value=d?.fc?.repos??""; $("#vfc").value=d?.fc?.vfc??"";
+  let tj=d?.type_jour??null;
+  if(!d && iso){ const wd=parseISO(iso).getDay(); if(wd===0||wd===6) tj="weekend"; }
+  setRadio("type_jour",tj);
+  setRadio("sport", d?.sport==null?null:(d.sport?"oui":"non"));
+  state.activities = (d?.activites||[]).map(a=>({...blankAct(),...a}));
+  if(d?.sport && !state.activities.length) state.activities=[blankAct()];
+  renderActs();
+  $("#pas").value=d?.pas??"";
+  setRadio("pdj", r.pdj_type??null); $("#pdjText").value=r.pdj_texte||"";
+  $("#dejeuner").value=r.dejeuner||"";
+  setRadio("gouter", r.gouter_type??null); $("#gouterText").value=r.gouter_texte||"";
+  $("#diner").value=r.diner||""; $("#dinerHeure").value=r.diner_heure||"";
+  $("#cafes").value=d?.cafes??0; $("#alcool").value=d?.alcool??0;
+  setRadio("sieste", d?.sieste==null?null:(d.sieste?"oui":"non")); $("#siesteMin").value=d?.sieste_min??"";
+  setRadio("stress", d?.stress??null);
+  $("#symptomes").value=d?.symptomes||""; $("#autre").value=d?.autre||"";
+  updateVisibility(); updateHeader();
+}
+
+/* ---------- Brouillons locaux ---------- */
+let draftTimer=null;
+function draftKey(iso){ return "draft:"+iso; }
+function saveDraft(){ try{ const f=getForm(); if(f.date) localStorage.setItem(draftKey(f.date), JSON.stringify(f)); }catch(e){} }
+function readDraft(iso){ try{ const v=localStorage.getItem(draftKey(iso)); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function clearDraft(iso){ try{ localStorage.removeItem(draftKey(iso)); }catch(e){} }
+function markDirty(){ state.dirty=true; setStatus("Modifications non enregistrées"); clearTimeout(draftTimer); draftTimer=setTimeout(saveDraft,600); }
+
+function loadDate(iso){
+  state.dirty=false;
+  const saved=state.days.get(iso), draft=readDraft(iso);
+  if(draft && (!saved || (draft.updatedAt||"")>(saved.updatedAt||""))){
+    setForm(draft, iso); state.dirty=true; setStatus("Brouillon repris, pense à enregistrer");
+  } else { setForm(saved||null, iso); setStatus(""); }
+}
+
+/* ---------- Événements ---------- */
+document.querySelector("main").addEventListener("input",e=>{
+  if(e.target.closest("#acts")) return;
+  if(e.target.matches("input[type=radio]")) updateVisibility();
+  if(e.target.matches("#sDurH,#sDurM")) state.durManual=true;
+  if(e.target.matches("#sCoucher,#sLever") && !state.durManual){ setDur(computeDur()); }
+  if(e.target.matches('input[name="sport"]') && e.target.value==="oui" && !state.activities.length){ state.activities=[blankAct()]; renderActs(); }
+  markDirty();
+});
+$("#date").addEventListener("change",()=>{ if(state.dirty) saveDraft(); loadDate($("#date").value); });
+document.querySelectorAll("[data-step]").forEach(b=>b.addEventListener("click",()=>{
+  const inp=$("#"+b.dataset.step); const v=Math.max(0,(num(inp.value)||0)+Number(b.dataset.d)); inp.value=v; markDirty();
+}));
+
+function setStatus(t,err){ const s=$("#status"); s.textContent=t; s.classList.toggle("err",!!err); }
+
+/* ---------- Enregistrement ---------- */
+$("#saveBtn").addEventListener("click", async ()=>{
+  const f=getForm();
+  if(!f.date){ setStatus("Choisis une date avant d’enregistrer.",true); return; }
+  if(!state.sb||!state.uid){ setStatus("Connecte-toi pour enregistrer.",true); return; }
+  const btn=$("#saveBtn"); btn.disabled=true; setStatus("Enregistrement…");
+  try{
+    const {error}=await state.sb.from("journal").upsert({user_id:state.uid,date:f.date,data:f,updated_at:f.updatedAt},{onConflict:"user_id,date"});
+    if(error) throw error;
+    state.days.set(f.date,f); clearDraft(f.date); state.dirty=false;
+    setStatus(`Journée du ${short(f.date)} enregistrée`); updateHeader(); renderHistory();
+  }catch(e){
+    setStatus(navigator.onLine===false ? "Hors ligne : brouillon gardé, enregistre quand tu as du réseau." : "Enregistrement impossible. Ton brouillon est gardé, réessaie.",true);
+    console.error(e); saveDraft();
+  }finally{ btn.disabled=false; }
+});
+
+/* ---------- Historique ---------- */
+function renderHistory(){
+  const list=$("#histList"); list.innerHTML="";
+  const entries=[...state.days.values()].sort((a,b)=>b.date.localeCompare(a.date));
+  $("#histCount").textContent = entries.length ? `${entries.length} journée${entries.length>1?"s":""} enregistrée${entries.length>1?"s":""}. Touche une ligne pour la modifier.` : "Aucune journée enregistrée pour l’instant.";
+  entries.slice(0,60).forEach(d=>{
+    const li=document.createElement("li"); const b=document.createElement("button"); b.type="button";
+    const sports=(d.activites||[]).map(a=>a.nature==="Autre"?(a.nature_autre||"Autre"):a.nature).join(", ");
+    const bits=[d.type_jour, sports||null, d.symptomes?("⚠ "+d.symptomes):null].filter(Boolean).join(" · ");
+    const hd=document.createElement("span"); hd.className="hd"; hd.textContent=short(d.date);
+    const hs=document.createElement("span"); hs.className="hs"; hs.textContent=bits||"—";
+    const st=document.createElement("span"); st.className="hstress"; st.textContent=d.stress??"–"; st.title="Stress";
+    b.append(hd,hs,st);
+    b.addEventListener("click",()=>{ if(state.dirty) saveDraft(); $("#date").value=d.date; loadDate(d.date); window.scrollTo({top:0,behavior:"smooth"}); });
+    li.appendChild(b); list.appendChild(li);
+  });
+}
+
+/* ---------- Export ---------- */
+function splitItems(t){ return (t||"").split(/[,;\n]+/).map(x=>x.trim().toLowerCase()).filter(Boolean); }
+function pdjText(r){ return r.pdj_type==="classique"?PDJ_CLASSIQUE:(r.pdj_type==="personnalisé"?r.pdj_texte:""); }
+function b01(v){ return v==null?null:(v?1:0); }
+function actName(a){ return a.nature==="Autre"?("Autre: "+(a.nature_autre||"")):a.nature; }
+
+function buildTables(){
+  const entries=[...state.days.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  const maxAct=Math.max(3,...entries.map(d=>(d.activites||[]).length));
+  const head=["date","jour_semaine","type_jour","sommeil_score","coucher","coucher_h","lever","lever_h","sommeil_duree_min","sommeil_commentaire","fc_repos","vfc",
+    "sport","nb_activites","sport_duree_totale_min","course_evenement"];
+  for(let i=1;i<=maxAct;i++) head.push(`act${i}_nature`,`act${i}_heure`,`act${i}_duree_min`,`act${i}_type`,`act${i}_course`);
+  head.push("pas","pdj_type","petit_dejeuner","dejeuner","gouter","diner","diner_heure","diner_h","cafes","alcool_verres","sieste","sieste_min","stress","symptomes","nb_symptomes","autre");
+  const journal=[head], acts=[["date","num_activite","nature","heure","heure_h","duree_min","type","course"]];
+  const foods=[["date","repas","aliment"]], symps=[["date","symptome"]];
+  entries.forEach(d=>{
+    const s=d.sommeil||{}, r=d.repas||{}, A=d.activites||[];
+    const row=[d.date,weekday(d.date),d.type_jour,s.score,s.coucher,hourDec(s.coucher,true),s.lever,hourDec(s.lever,false),s.duree_min,s.commentaire||null,d.fc?.repos??null,d.fc?.vfc??null,
+      b01(d.sport),A.length,A.length?A.reduce((t,a)=>t+(a.duree_min||0),0):0,A.length?(A.some(a=>a.course)?1:0):0];
+    for(let i=0;i<maxAct;i++){ const a=A[i]; row.push(a?actName(a):null,a?.heure||null,a?.duree_min??null,a?.type||null,a?(a.course?1:0):null); }
+    const g = r.gouter_type==="oui" ? r.gouter_texte : (r.gouter_type==="aucun"?"aucun":null);
+    const sy=splitItems(d.symptomes);
+    row.push(d.pas,r.pdj_type,pdjText(r)||null,r.dejeuner||null,g,r.diner||null,r.diner_heure,hourDec(r.diner_heure,false),d.cafes,d.alcool,b01(d.sieste),d.sieste_min,d.stress,d.symptomes||null,sy.length,d.autre||null);
+    journal.push(row.map(v=>v===undefined?null:v));
+    A.forEach((a,i)=>acts.push([d.date,i+1,actName(a),a.heure||null,hourDec(a.heure,false),a.duree_min??null,a.type||null,a.course?1:0]));
+    [["petit_dejeuner",pdjText(r)],["dejeuner",r.dejeuner],["gouter",r.gouter_type==="oui"?r.gouter_texte:""],["diner",r.diner]]
+      .forEach(([k,t])=>splitItems(t).forEach(x=>foods.push([d.date,k,x])));
+    sy.forEach(x=>symps.push([d.date,x]));
+  });
+  return {entries,journal,acts,foods,symps};
+}
+const DICT=[["date","Date de la journée (jj/mm/aa)"],["jour_semaine","Jour de la semaine"],["type_jour","travaillé, off ou weekend"],
+ ["sommeil_score","Score de sommeil Garmin de la nuit précédente (0-100)"],["coucher / lever","Heures au format HH:MM"],
+ ["coucher_h / lever_h / diner_h / heure_h","Heure décimale (23,5 = 23h30). Coucher après minuit = 24+ pour garder la continuité"],
+ ["sommeil_duree_min","Durée de sommeil en minutes"],["fc_repos","Fréquence cardiaque au repos (bpm)"],["vfc","Variabilité de la fréquence cardiaque (ms)"],["sport / sieste / course","1 = oui, 0 = non, vide = non renseigné"],
+ ["actN_…","Détail des activités sportives, une série de colonnes par activité"],["alcool_verres / cafes","Nombre dans la journée"],
+ ["stress","1 (chill) à 5 (couru partout + stress psychologique)"],["Onglet Activites","Une ligne par activité sportive"],
+ ["Onglet Aliments","Une ligne par aliment et par repas (texte découpé sur les virgules)"],["Onglet Symptomes","Une ligne par symptôme"],
+ ["Analyse décalée","Pour tester « aliment X → symptôme J+n », croise Aliments et Symptomes sur date + n jours"]];
+
+function sheet(aoa, widths){
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  for(let r=1;r<aoa.length;r++){ const ref=XLSX.utils.encode_cell({r,c:0}); const v=aoa[r][0]; if(v) ws[ref]={t:"n",v:excelSerial(v),z:"dd/mm/yy"}; }
+  if(ws["!ref"]) ws["!autofilter"]={ref:ws["!ref"]};
+  ws["!cols"]=aoa[0].map((h,i)=>({wch:widths?.[i]||Math.max(10,String(h).length+2)}));
+  return ws;
+}
+function offer(filename,data,type){
+  const blob=new Blob([data],{type});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  $("#expMsg").textContent=`${filename} téléchargé.`;
+}
+$("#expXlsx").addEventListener("click",()=>{
+  const t=buildTables();
+  if(!t.entries.length){ $("#expMsg").textContent="Rien à exporter : enregistre d’abord une journée."; return; }
+  if(typeof XLSX==="undefined"){ $("#expMsg").textContent="Le module Excel n’a pas chargé. Utilise l’export CSV."; return; }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,sheet(t.journal),"Journal");
+  XLSX.utils.book_append_sheet(wb,sheet(t.acts),"Activites");
+  XLSX.utils.book_append_sheet(wb,sheet(t.foods,[10,16,30]),"Aliments");
+  XLSX.utils.book_append_sheet(wb,sheet(t.symps,[10,34]),"Symptomes");
+  const d=XLSX.utils.aoa_to_sheet([["Colonne","Description"],...DICT]); d["!cols"]=[{wch:36},{wch:90}];
+  XLSX.utils.book_append_sheet(wb,d,"Lisez-moi");
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  offer(`suivi-sante_${todayISO()}.xlsx`, new Uint8Array(buf), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+});
+$("#expCsv").addEventListener("click",()=>{
+  const t=buildTables();
+  if(!t.entries.length){ $("#expMsg").textContent="Rien à exporter : enregistre d’abord une journée."; return; }
+  const esc=v=>{ if(v==null) return ""; let s=typeof v==="number"?String(v).replace(".",","):String(v); return /[;"\n\r]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; };
+  const rows=t.journal.map((r,i)=>r.map((v,c)=>c===0&&i>0?short(v):v).map(esc).join(";"));
+  offer(`suivi-sante_${todayISO()}.csv`, "\ufeff"+rows.join("\r\n"), "text/csv;charset=utf-8");
+});
+
+/* ---------- Démarrage ---------- */
+$("#date").value=todayISO();
+loadDate(todayISO());
+
+function banner(t){ const b=$("#banner"); b.textContent=t; b.hidden=false; }
+function showApp(on){ $("#auth").hidden=on; $("#app").hidden=!on; $("#savebar").hidden=!on; }
+
+async function fetchDays(){
+  const {data,error}=await state.sb.from("journal").select("date,data").order("date",{ascending:false}).limit(5000);
+  if(error){ banner("Impossible de charger l’historique. Vérifie ta connexion puis recharge."); console.error(error); return; }
+  state.days=new Map(data.map(r=>[r.date,{...r.data,date:r.date}]));
+  renderHistory(); updateHeader();
+  if(state.firstSnap){ state.firstSnap=false; if(!state.dirty) loadDate($("#date").value); }
+}
+
+async function onSession(session){
+  if(session?.user){
+    const first=state.uid!==session.user.id;
+    state.uid=session.user.id; showApp(true);
+    if(first){ state.firstSnap=true; fetchDays(); }
+  } else { state.uid=null; state.days=new Map(); showApp(false); }
+}
+
+/* Connexion par code */
+$("#authSend").addEventListener("click", async ()=>{
+  const email=$("#authEmail").value.trim(); const m=$("#authMsg");
+  if(!email){ m.textContent="Indique ton adresse e-mail."; return; }
+  $("#authSend").disabled=true; m.textContent="Envoi…";
+  const {error}=await state.sb.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
+  $("#authSend").disabled=false;
+  if(error){ m.textContent="Envoi impossible : "+error.message; return; }
+  $("#authStep1").hidden=true; $("#authStep2").hidden=false; m.textContent=`E-mail envoyé à ${email}.`;
+});
+$("#authVerify").addEventListener("click", async ()=>{
+  const email=$("#authEmail").value.trim(), token=$("#authCode").value.trim(); const m=$("#authMsg");
+  if(!token){ m.textContent="Saisis le code reçu."; return; }
+  $("#authVerify").disabled=true; m.textContent="Vérification…";
+  const {error}=await state.sb.auth.verifyOtp({email,token,type:"email"});
+  $("#authVerify").disabled=false;
+  m.textContent = error ? "Code invalide ou expiré. Redemande un code." : "";
+});
+$("#authBack").addEventListener("click",()=>{ $("#authStep1").hidden=false; $("#authStep2").hidden=true; $("#authMsg").textContent=""; });
+$("#logout").addEventListener("click", async ()=>{ await state.sb.auth.signOut(); });
+
+/* Resynchroniser quand on revient sur la page (téléphone ↔ ordi) */
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && state.uid && !state.dirty){ state.firstSnap=true; fetchDays(); } });
+
+(async()=>{
+  if(!window.supabase || /VOTRE/.test(window.SUPABASE_URL+window.SUPABASE_ANON_KEY)){
+    $("#auth").hidden=false; $("#authMsg").textContent="Configuration manquante : renseigne SUPABASE_URL et SUPABASE_ANON_KEY en haut du fichier index.html."; $("#authSend").disabled=true; return;
+  }
+  state.sb=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  state.sb.auth.onAuthStateChange((_e,session)=>{ onSession(session); });
+  const {data}=await state.sb.auth.getSession();
+  onSession(data.session);
+})();
+})();
+</script>
+</body>
+</html>
