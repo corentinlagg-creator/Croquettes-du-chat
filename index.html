@@ -183,11 +183,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   </section>
 
   <section class="block night-block" aria-labelledby="h-fc">
-    <h2 id="h-fc">Fréquence cardiaque</h2>
+    <h2 id="h-fc">Récupération</h2>
     <p class="hint">Valeurs Garmin de la nuit passée.</p>
     <div class="row">
       <label class="f">FC repos (bpm)<input type="number" id="fcRepos" inputmode="numeric" min="20" max="150" placeholder="ex. 48"></label>
       <label class="f">VFC (ms)<input type="number" id="vfc" inputmode="numeric" min="0" max="300" placeholder="ex. 62"></label>
+    </div>
+    <div class="row">
+      <label class="f">Body Battery au réveil<input type="number" id="bodyBattery" inputmode="numeric" min="0" max="100" placeholder="0 à 100"></label>
+      <label class="f">Respiration nuit (resp/min)<input type="number" id="freqResp" inputmode="decimal" min="0" max="40" step="0.1" placeholder="ex. 14"></label>
     </div>
   </section>
 
@@ -288,12 +292,41 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
       <input type="radio" name="stress" id="st5" value="5"><label for="st5">5</label>
     </div>
     <div class="stress-scale"><span>Chill</span><span>Couru partout + stress psy</span></div>
+    <label class="f">Stress Garmin moyen<input type="number" id="stressGarmin" inputmode="numeric" min="0" max="100" placeholder="0 à 100"></label>
+  </section>
+
+  <section class="block" aria-labelledby="h-forme">
+    <h2 id="h-forme">Énergie et humeur</h2>
+    <span class="q" id="q-energie">Énergie</span>
+    <div class="stress" role="radiogroup" aria-labelledby="q-energie">
+      <input type="radio" name="energie" id="energie1" value="1"><label for="energie1">1</label>
+      <input type="radio" name="energie" id="energie2" value="2"><label for="energie2">2</label>
+      <input type="radio" name="energie" id="energie3" value="3"><label for="energie3">3</label>
+      <input type="radio" name="energie" id="energie4" value="4"><label for="energie4">4</label>
+      <input type="radio" name="energie" id="energie5" value="5"><label for="energie5">5</label>
+    </div>
+    <div class="stress-scale"><span>À plat</span><span>Pleine forme</span></div>
+    <span class="q" id="q-humeur">Humeur</span>
+    <div class="stress" role="radiogroup" aria-labelledby="q-humeur">
+      <input type="radio" name="humeur" id="humeur1" value="1"><label for="humeur1">1</label>
+      <input type="radio" name="humeur" id="humeur2" value="2"><label for="humeur2">2</label>
+      <input type="radio" name="humeur" id="humeur3" value="3"><label for="humeur3">3</label>
+      <input type="radio" name="humeur" id="humeur4" value="4"><label for="humeur4">4</label>
+      <input type="radio" name="humeur" id="humeur5" value="5"><label for="humeur5">5</label>
+    </div>
+    <div class="stress-scale"><span>Mauvaise</span><span>Excellente</span></div>
   </section>
 
   <section class="block" aria-labelledby="h-symp">
     <h2 id="h-symp">Symptômes</h2>
     <p class="hint">Un symptôme par virgule, ex. mal de ventre, rhinite allergique.</p>
     <textarea id="symptomes" aria-labelledby="h-symp" placeholder="Rien de particulier"></textarea>
+  </section>
+
+  <section class="block" aria-labelledby="h-medic">
+    <h2 id="h-medic">Médicaments pris</h2>
+    <p class="hint">Un par virgule, avec la dose si utile, ex. antihistaminique, ibuprofène 400.</p>
+    <textarea id="medicaments" aria-labelledby="h-medic" placeholder="Aucun"></textarea>
   </section>
 
   <section class="block" aria-labelledby="h-autre">
@@ -434,7 +467,7 @@ function getForm(){
     date:$("#date").value,
     sommeil:{ score:num($("#sScore").value), coucher:$("#sCoucher").value||null, lever:$("#sLever").value||null,
       duree_min:(dh==null&&dm==null)?null:(dh||0)*60+(dm||0), commentaire:$("#sComment").value.trim() },
-    fc:{ repos:num($("#fcRepos").value), vfc:num($("#vfc").value) },
+    fc:{ repos:num($("#fcRepos").value), vfc:num($("#vfc").value), body_battery:num($("#bodyBattery").value), freq_resp:num($("#freqResp").value) },
     type_jour:radioVal("type_jour"),
     sport: sport==null?null:sport==="oui",
     activites: sport==="oui" ? state.activities.filter(a=>a.nature).map(a=>({...a, nature_autre:a.nature==="Autre"?a.nature_autre.trim():""})) : [],
@@ -444,7 +477,8 @@ function getForm(){
       diner:$("#diner").value.trim(), diner_heure:$("#dinerHeure").value||null },
     cafes:num($("#cafes").value), alcool:num($("#alcool").value),
     sieste: sieste==null?null:sieste==="oui", sieste_min: sieste==="oui"?num($("#siesteMin").value):null,
-    stress:num(radioVal("stress")),
+    stress:num(radioVal("stress")), stress_garmin:num($("#stressGarmin").value),
+    energie:num(radioVal("energie")), humeur:num(radioVal("humeur")), medicaments:$("#medicaments").value.trim(),
     symptomes:$("#symptomes").value.trim(), autre:$("#autre").value.trim(),
     updatedAt:new Date().toISOString()
   };
@@ -455,6 +489,7 @@ function setForm(d, iso){
   setDur(s.duree_min??null); state.durManual = s.duree_min!=null && s.duree_min!==computeDur();
   $("#sComment").value=s.commentaire||"";
   $("#fcRepos").value=d?.fc?.repos??""; $("#vfc").value=d?.fc?.vfc??"";
+  $("#bodyBattery").value=d?.fc?.body_battery??""; $("#freqResp").value=d?.fc?.freq_resp??"";
   let tj=d?.type_jour??null;
   if(!d && iso){ const wd=parseISO(iso).getDay(); if(wd===0||wd===6) tj="weekend"; }
   setRadio("type_jour",tj);
@@ -469,7 +504,8 @@ function setForm(d, iso){
   $("#diner").value=r.diner||""; $("#dinerHeure").value=r.diner_heure||"";
   $("#cafes").value=d?.cafes??0; $("#alcool").value=d?.alcool??0;
   setRadio("sieste", d?.sieste==null?null:(d.sieste?"oui":"non")); $("#siesteMin").value=d?.sieste_min??"";
-  setRadio("stress", d?.stress??null);
+  setRadio("stress", d?.stress??null); $("#stressGarmin").value=d?.stress_garmin??"";
+  setRadio("energie", d?.energie??null); setRadio("humeur", d?.humeur??null); $("#medicaments").value=d?.medicaments||"";
   $("#symptomes").value=d?.symptomes||""; $("#autre").value=d?.autre||"";
   updateVisibility(); updateHeader();
 }
@@ -550,34 +586,35 @@ function actName(a){ return a.nature==="Autre"?("Autre: "+(a.nature_autre||"")):
 function buildTables(){
   const entries=[...state.days.values()].sort((a,b)=>a.date.localeCompare(b.date));
   const maxAct=Math.max(3,...entries.map(d=>(d.activites||[]).length));
-  const head=["date","jour_semaine","type_jour","sommeil_score","coucher","coucher_h","lever","lever_h","sommeil_duree_min","sommeil_commentaire","fc_repos","vfc",
+  const head=["date","jour_semaine","type_jour","sommeil_score","coucher","coucher_h","lever","lever_h","sommeil_duree_min","sommeil_commentaire","fc_repos","vfc","body_battery_reveil","freq_resp_nuit",
     "sport","nb_activites","sport_duree_totale_min","course_evenement"];
   for(let i=1;i<=maxAct;i++) head.push(`act${i}_nature`,`act${i}_heure`,`act${i}_duree_min`,`act${i}_type`,`act${i}_course`);
-  head.push("pas","pdj_type","petit_dejeuner","dejeuner","gouter","diner","diner_heure","diner_h","cafes","alcool_verres","sieste","sieste_min","stress","symptomes","nb_symptomes","autre");
+  head.push("pas","pdj_type","petit_dejeuner","dejeuner","gouter","diner","diner_heure","diner_h","cafes","alcool_verres","sieste","sieste_min","stress","stress_garmin","energie","humeur","symptomes","nb_symptomes","medicaments","nb_medicaments","autre");
   const journal=[head], acts=[["date","num_activite","nature","heure","heure_h","duree_min","type","course"]];
-  const foods=[["date","repas","aliment"]], symps=[["date","symptome"]];
+  const foods=[["date","repas","aliment"]], symps=[["date","symptome"]], meds=[["date","medicament"]];
   entries.forEach(d=>{
     const s=d.sommeil||{}, r=d.repas||{}, A=d.activites||[];
-    const row=[d.date,weekday(d.date),d.type_jour,s.score,s.coucher,hourDec(s.coucher,true),s.lever,hourDec(s.lever,false),s.duree_min,s.commentaire||null,d.fc?.repos??null,d.fc?.vfc??null,
+    const row=[d.date,weekday(d.date),d.type_jour,s.score,s.coucher,hourDec(s.coucher,true),s.lever,hourDec(s.lever,false),s.duree_min,s.commentaire||null,d.fc?.repos??null,d.fc?.vfc??null,d.fc?.body_battery??null,d.fc?.freq_resp??null,
       b01(d.sport),A.length,A.length?A.reduce((t,a)=>t+(a.duree_min||0),0):0,A.length?(A.some(a=>a.course)?1:0):0];
     for(let i=0;i<maxAct;i++){ const a=A[i]; row.push(a?actName(a):null,a?.heure||null,a?.duree_min??null,a?.type||null,a?(a.course?1:0):null); }
     const g = r.gouter_type==="oui" ? r.gouter_texte : (r.gouter_type==="aucun"?"aucun":null);
-    const sy=splitItems(d.symptomes);
-    row.push(d.pas,r.pdj_type,pdjText(r)||null,r.dejeuner||null,g,r.diner||null,r.diner_heure,hourDec(r.diner_heure,false),d.cafes,d.alcool,b01(d.sieste),d.sieste_min,d.stress,d.symptomes||null,sy.length,d.autre||null);
+    const sy=splitItems(d.symptomes), md=splitItems(d.medicaments);
+    row.push(d.pas,r.pdj_type,pdjText(r)||null,r.dejeuner||null,g,r.diner||null,r.diner_heure,hourDec(r.diner_heure,false),d.cafes,d.alcool,b01(d.sieste),d.sieste_min,d.stress,d.stress_garmin??null,d.energie??null,d.humeur??null,d.symptomes||null,sy.length,d.medicaments||null,md.length,d.autre||null);
     journal.push(row.map(v=>v===undefined?null:v));
     A.forEach((a,i)=>acts.push([d.date,i+1,actName(a),a.heure||null,hourDec(a.heure,false),a.duree_min??null,a.type||null,a.course?1:0]));
     [["petit_dejeuner",pdjText(r)],["dejeuner",r.dejeuner],["gouter",r.gouter_type==="oui"?r.gouter_texte:""],["diner",r.diner]]
       .forEach(([k,t])=>splitItems(t).forEach(x=>foods.push([d.date,k,x])));
     sy.forEach(x=>symps.push([d.date,x]));
+    md.forEach(x=>meds.push([d.date,x]));
   });
-  return {entries,journal,acts,foods,symps};
+  return {entries,journal,acts,foods,symps,meds};
 }
 const DICT=[["date","Date de la journée (jj/mm/aa)"],["jour_semaine","Jour de la semaine"],["type_jour","travaillé, off ou weekend"],
  ["sommeil_score","Score de sommeil Garmin de la nuit précédente (0-100)"],["coucher / lever","Heures au format HH:MM"],
  ["coucher_h / lever_h / diner_h / heure_h","Heure décimale (23,5 = 23h30). Coucher après minuit = 24+ pour garder la continuité"],
- ["sommeil_duree_min","Durée de sommeil en minutes"],["fc_repos","Fréquence cardiaque au repos (bpm)"],["vfc","Variabilité de la fréquence cardiaque (ms)"],["sport / sieste / course","1 = oui, 0 = non, vide = non renseigné"],
+ ["sommeil_duree_min","Durée de sommeil en minutes"],["fc_repos","Fréquence cardiaque au repos (bpm)"],["vfc","Variabilité de la fréquence cardiaque (ms)"],["body_battery_reveil","Body Battery Garmin au réveil (0-100)"],["freq_resp_nuit","Fréquence respiratoire nocturne (resp/min)"],["sport / sieste / course","1 = oui, 0 = non, vide = non renseigné"],
  ["actN_…","Détail des activités sportives, une série de colonnes par activité"],["alcool_verres / cafes","Nombre dans la journée"],
- ["stress","1 (chill) à 5 (couru partout + stress psychologique)"],["Onglet Activites","Une ligne par activité sportive"],
+ ["stress","1 (chill) à 5 (couru partout + stress psychologique)"],["stress_garmin","Stress Garmin moyen de la journée (0-100)"],["energie / humeur","Ressenti de 1 (à plat / mauvaise) à 5 (pleine forme / excellente)"],["Onglet Medicaments","Une ligne par médicament pris"],["Onglet Activites","Une ligne par activité sportive"],
  ["Onglet Aliments","Une ligne par aliment et par repas (texte découpé sur les virgules)"],["Onglet Symptomes","Une ligne par symptôme"],
  ["Analyse décalée","Pour tester « aliment X → symptôme J+n », croise Aliments et Symptomes sur date + n jours"]];
 
@@ -604,6 +641,7 @@ $("#expXlsx").addEventListener("click",()=>{
   XLSX.utils.book_append_sheet(wb,sheet(t.acts),"Activites");
   XLSX.utils.book_append_sheet(wb,sheet(t.foods,[10,16,30]),"Aliments");
   XLSX.utils.book_append_sheet(wb,sheet(t.symps,[10,34]),"Symptomes");
+  XLSX.utils.book_append_sheet(wb,sheet(t.meds,[10,34]),"Medicaments");
   const d=XLSX.utils.aoa_to_sheet([["Colonne","Description"],...DICT]); d["!cols"]=[{wch:36},{wch:90}];
   XLSX.utils.book_append_sheet(wb,d,"Lisez-moi");
   const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
